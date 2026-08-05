@@ -1,6 +1,8 @@
 package net.vplaygames.quizonconvertor.parser
 
+import net.vplaygames.quizonconvertor.extractor.ExtractedImage
 import net.vplaygames.quizonconvertor.extractor.PageContent
+import net.vplaygames.quizonconvertor.extractor.PdfImageExtractor
 import net.vplaygames.quizonconvertor.extractor.PdfTextExtractor
 import net.vplaygames.quizonconvertor.model.QuizExport
 import net.vplaygames.quizonconvertor.model.QuizPaperData
@@ -9,12 +11,23 @@ import java.io.File
 
 object PdfParser {
 
-    fun parse(pdfFile: File, strict: Boolean = false): List<QuizExport> {
+    fun parse(pdfFile: File, outputDir: File = File("output"), strict: Boolean = false): List<QuizExport> {
         val pages = PdfTextExtractor.extractText(pdfFile)
-        return parsePages(pages, strict)
+        val images = try {
+            PdfImageExtractor.extractImages(pdfFile)
+        } catch (e: Exception) {
+            System.err.println("Warning: Could not extract images from PDF: ${e.message}")
+            emptyList()
+        }
+        return parsePages(pages, images, outputDir, strict)
     }
 
-    fun parsePages(pages: List<PageContent>, strict: Boolean = false): List<QuizExport> {
+    fun parsePages(
+        pages: List<PageContent>,
+        images: List<ExtractedImage> = emptyList(),
+        outputDir: File = File("output"),
+        strict: Boolean = false
+    ): List<QuizExport> {
         val sectionContents = SectionSplitter.splitSections(pages)
         if (sectionContents.isEmpty()) {
             throw ConversionError("No sections found in PDF document.")
@@ -27,7 +40,7 @@ object PdfParser {
 
         for ((sectionName, lines) in sectionContents) {
             val tokens = lineClassifier.classifyAll(lines)
-            val questions = questionBuilder.buildQuestions(tokens)
+            var questions = questionBuilder.buildQuestions(tokens)
 
             if (questions.isEmpty()) {
                 val lastToken = tokens.lastOrNull()?.let { it::class.simpleName } ?: "None"
@@ -37,6 +50,16 @@ object PdfParser {
                     throw ConversionError(diagnostic)
                 }
                 continue
+            }
+
+            if (images.isNotEmpty()) {
+                questions = ImageAssociator.associateAndSaveImages(
+                    questions = questions,
+                    tokens = tokens,
+                    allImages = images,
+                    outputDir = outputDir,
+                    sectionName = sectionName
+                )
             }
 
             val subject = extractSubjectData(sectionName, tokens)

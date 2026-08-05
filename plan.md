@@ -589,15 +589,15 @@ object Patterns {
 
 ### TODO
 
-- [ ] Create `extractor/PdfImageExtractor.kt`
+- [x] Create `extractor/PdfImageExtractor.kt`
   - Function: `fun extractImages(pdfFile: File): List<ExtractedImage>`
   - `ExtractedImage` = `data class ExtractedImage(val pageNum: Int, val x: Float, val y: Float, val width: Float, val height: Float, val image: BufferedImage, val colorspace: String)`
-- [ ] Filter out UI artifacts (small icons ≤ 15px)
-- [ ] Create `parser/ImageAssociator.kt` — matches images to questions by page/Y-position
-- [ ] Save images to output directory (organized per section)
-- [ ] Update `QuestionData.image` and `OptionData.image` with relative paths
-- [ ] For image-only options with no text color signal, use icon colorspace as fallback for `isCorrect`
-- [ ] Test with specimen — verify correct association
+- [x] Filter out UI artifacts (small icons ≤ 15px)
+- [x] Create `parser/ImageAssociator.kt` — matches images to questions by page/Y-position
+- [x] Save images to output directory (organized per section)
+- [x] Update `QuestionData.image` and `OptionData.image` with relative paths
+- [x] For image-only options with no text color signal, use icon colorspace as fallback for `isCorrect`
+- [x] Test with specimen — verify correct association
 
 ### Alternative: Page-Region Cropping
 
@@ -921,7 +921,7 @@ Deferred — the JSON output format is generic enough to support `loaddata`, a c
 | 0 — Scaffolding | ✅ Complete | 2026-08-05 | 2026-08-05 | Project initialized, builds cleanly |
 | 1 — Color-Aware Extractor | ✅ Complete | 2026-08-05 | 2026-08-05 | Key differentiator: color → answer key |
 | 2 — Structured Parser | ✅ Complete | 2026-08-05 | 2026-08-05 | Tokenizer, SectionSplitter, QuestionBuilder state machine, unit tests passing |
-| 3 — Image Extraction | ⬜ Not Started | | | |
+| 3 — Image Extraction | ✅ Complete | 2026-08-05 | 2026-08-05 | PdfImageExtractor & ImageAssociator created, 29 images extracted and linked |
 | 4 — JSON + CLI | ⬜ Not Started | | | |
 | 5 — Ktor Web GUI | ⬜ Not Started | | | JVM-only, no KMP |
 | 6 — Validation | ⬜ Not Started | | | |

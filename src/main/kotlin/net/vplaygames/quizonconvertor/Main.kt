@@ -13,11 +13,13 @@ fun main(args: Array<String>) {
         return
     }
 
+    val outputDir = File("output")
     println("Parsing PDF into structured data: ${pdfFile.absolutePath}")
-    try {
-        val exports = PdfParser.parse(pdfFile, strict = false)
 
-        println("\n=== Parsing Summary ===")
+    try {
+        val exports = PdfParser.parse(pdfFile, outputDir = outputDir, strict = false)
+
+        println("\n=== Parsing & Image Pipeline Summary ===")
         println("Total Sections Extracted: ${exports.size}")
 
         exports.forEachIndexed { idx, export ->
@@ -37,6 +39,11 @@ fun main(args: Array<String>) {
             val natWithAnswerKey = export.questions.count { it.correctAnswer != null }
             println("  - Correct Options Identified: $optionsWithAnswerKey")
             println("  - Correct NAT Answers Identified: $natWithAnswerKey")
+
+            val questionImages = export.questions.count { it.image != null }
+            val optionImages = export.questions.flatMap { it.options }.count { it.image != null }
+            println("  - Question Diagrams Extracted: $questionImages")
+            println("  - Option Images Extracted: $optionImages")
         }
     } catch (e: ConversionError) {
         println("Conversion Error: ${e.message}")
@@ -45,4 +52,5 @@ fun main(args: Array<String>) {
         e.printStackTrace()
     }
 }
+
 
