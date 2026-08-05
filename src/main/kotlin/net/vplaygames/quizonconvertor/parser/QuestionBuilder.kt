@@ -6,6 +6,7 @@ import net.vplaygames.quizonconvertor.extractor.TextColor
 import net.vplaygames.quizonconvertor.model.ComprehensionData
 import net.vplaygames.quizonconvertor.model.OptionData
 import net.vplaygames.quizonconvertor.model.QuestionData
+import kotlin.math.roundToInt
 
 data class BuildResult(
     val questions: List<QuestionData>,
@@ -36,7 +37,7 @@ class QuestionBuilder {
         var endNumber: Int = 0
     ) {
         fun build(): ComprehensionData {
-            val qNums = if (startNumber > 0 && endNumber >= startNumber) (startNumber..endNumber).toList() else emptyList()
+            val qNums = if (startNumber in 1..endNumber) (startNumber..endNumber).toList() else emptyList()
             return ComprehensionData(
                 sourceId = sourceId,
                 text = textLines.joinToString("\n").trim(),
@@ -119,7 +120,7 @@ class QuestionBuilder {
 
                 if (min != max) {
                     val tol = max - min
-                    q.natTolerance = if (tol % 1.0 == 0.0) tol else (Math.round(tol * 10000.0) / 10000.0)
+                    q.natTolerance = if (tol % 1.0 == 0.0) tol else ((tol * 10000.0).roundToInt() / 10000.0)
                 }
                 return
             }
