@@ -210,6 +210,12 @@ class QuestionBuilder {
                     }
                 }
 
+                is Token.QuestionLabel -> {
+                    if (currentState == State.READING_COMPREHENSION_TEXT) {
+                        currentComprehension?.textLines?.clear()
+                    }
+                }
+
                 is Token.SubQuestionsHeader -> {
                     if (currentState == State.READING_COMPREHENSION_TEXT) {
                         currentState = State.IDLE

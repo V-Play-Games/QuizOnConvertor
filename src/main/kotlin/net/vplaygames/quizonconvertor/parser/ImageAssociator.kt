@@ -217,12 +217,13 @@ object ImageAssociator {
             val matchingC = comprehensions.find { it.sourceId == currentHeader.id } ?: continue
 
             val headerIndex = tokens.indexOf(currentHeader)
-            val nextHeader = tokens.subList(headerIndex, tokens.size)
-                .filterIsInstance<Token.QuestionHeader>()
-                .firstOrNull()
+            val subTokens = tokens.subList(headerIndex, tokens.size)
 
-            val startPage = currentHeader.line.pageNum
-            val startY = currentHeader.line.y
+            val labelToken = subTokens.filterIsInstance<Token.QuestionLabel>().firstOrNull()
+            val nextHeader = subTokens.filterIsInstance<Token.QuestionHeader>().firstOrNull()
+
+            val startPage = labelToken?.line?.pageNum ?: currentHeader.line.pageNum
+            val startY = labelToken?.line?.y ?: currentHeader.line.y
 
             val endPage = nextHeader?.line?.pageNum ?: (startPage + 2)
             val endY = nextHeader?.line?.y

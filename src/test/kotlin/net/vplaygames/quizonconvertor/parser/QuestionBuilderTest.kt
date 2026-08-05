@@ -132,7 +132,9 @@ class QuestionBuilderTest {
         val lines = listOf(
             ColoredLine("Question Id : 640653902328 Question Type : COMPREHENSION", TextColor.BLACK, 10f, 1),
             ColoredLine("Question Numbers : (53 to 54)", TextColor.BLACK, 20f, 1),
-            ColoredLine("Read the following passage carefully:", TextColor.BLACK, 22f, 1),
+            ColoredLine("Text above question label to be ignored", TextColor.BLACK, 21f, 1),
+            ColoredLine("Question Label : Comprehension", TextColor.BLACK, 22f, 1),
+            ColoredLine("Read the following passage carefully:", TextColor.BLACK, 23f, 1),
             ColoredLine("This is paragraph 1 of the comprehension passage.", TextColor.BLACK, 24f, 1),
             ColoredLine("Sub questions", TextColor.BLACK, 26f, 1),
             ColoredLine("Question Number : 53 Question Id : 640653902329 Question Type : MCQ", TextColor.BLACK, 30f, 1),
