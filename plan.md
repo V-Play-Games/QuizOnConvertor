@@ -259,11 +259,11 @@ src/main/kotlin/net/vplaygames/quizonconvertor/
 ### TODO
 
 - [x] Initialize Kotlin/JVM project with Gradle 9.6
-- [ ] Update `libs.versions.toml` with all dependency versions
-- [ ] Update `build.gradle.kts` with plugins and dependencies
-- [ ] Create package directory structure
-- [ ] Create placeholder `Main.kt` that prints "QuizOnConvertor ready"
-- [ ] Verify `./gradlew run` works
+- [x] Update `libs.versions.toml` with all dependency versions
+- [x] Update `build.gradle.kts` with plugins and dependencies
+- [x] Create package directory structure
+- [x] Create placeholder `Main.kt` that prints "QuizOnConvertor ready"
+- [x] Verify `./gradlew run` works
 
 ### Dependencies to Add
 
@@ -918,8 +918,8 @@ Deferred — the JSON output format is generic enough to support `loaddata`, a c
 
 | Phase | Status | Started | Completed | Notes |
 |-------|--------|---------|-----------|-------|
-| 0 — Scaffolding | ⬜ Not Started | | | |
-| 1 — Color-Aware Extractor | ⬜ Not Started | | | Key differentiator: color → answer key |
+| 0 — Scaffolding | ✅ Complete | 2026-08-05 | 2026-08-05 | Project initialized, builds cleanly |
+| 1 — Color-Aware Extractor | 🔄 In Progress | 2026-08-05 | | Key differentiator: color → answer key |
 | 2 — Structured Parser | ⬜ Not Started | | | Per-section output, error on incomplete |
 | 3 — Image Extraction | ⬜ Not Started | | | |
 | 4 — JSON + CLI | ⬜ Not Started | | | |
