@@ -757,16 +757,16 @@ Browser                          Ktor Server (JVM)
 
 ### TODO
 
-- [ ] Create `server/Server.kt` — `embeddedServer(Netty, port=8080)` setup
-- [ ] Create `server/Routes.kt` — route definitions
-- [ ] Create `server/Pages.kt` — HTML DSL templates for the upload page
-- [ ] Implement multipart file upload handling
-- [ ] Wire conversion pipeline into POST handler
-- [ ] ZIP the per-section JSON files + images for download
-- [ ] Add error handling (invalid PDF, parsing failures → show errors in UI)
-- [ ] Add section summary table in response (how many questions, answer key stats)
-- [ ] Test with browser upload of specimen PDF
-- [ ] Add `--server` flag to `Main.kt` to start in server mode vs CLI mode
+- [x] Create `server/Server.kt` — `embeddedServer(Netty, port=8080)` setup
+- [x] Create `server/Routes.kt` — route definitions
+- [x] Create `server/Pages.kt` — HTML DSL templates for the upload page
+- [x] Implement multipart file upload handling
+- [x] Wire conversion pipeline into POST handler
+- [x] ZIP the per-section JSON files + images for download
+- [x] Add error handling (invalid PDF, parsing failures → show errors in UI)
+- [x] Add section summary table in response (how many questions, answer key stats)
+- [x] Test with browser upload of specimen PDF
+- [x] Add `--server` flag to `Main.kt` to start in server mode vs CLI mode
 
 ### Server Startup
 
@@ -789,15 +789,15 @@ fun main(args: Array<String>) {
 
 ### TODO
 
-- [ ] Test with multiple PDF specimens (different subjects, terms, years)
-- [ ] Add JSON schema validation for output
-- [ ] Handle malformed PDFs gracefully (clear error messages with section-level diagnostics)
-- [ ] Add conversion warnings/notes in output (e.g., "Question 47: no text extracted, image-only")
-- [ ] Add `--dry-run` mode that shows what would be extracted without writing files
-- [ ] Write README.md with usage instructions
-- [ ] Add unit tests for parser (at least 80% branch coverage on state machine)
-- [ ] Add integration test: PDF → JSON → validate against Django model schema
-- [ ] Test answer key accuracy: compare extracted `isCorrect` values against manual verification
+- [x] Test with multiple PDF specimens (different subjects, terms, years)
+- [x] Add JSON schema validation for output
+- [x] Handle malformed PDFs gracefully (clear error messages with section-level diagnostics)
+- [x] Add conversion warnings/notes in output (e.g., "Question 47: no text extracted, image-only")
+- [x] Add `--dry-run` mode that shows what would be extracted without writing files
+- [x] Write README.md with usage instructions
+- [x] Add unit tests for parser (at least 80% branch coverage on state machine)
+- [x] Add integration test: PDF → JSON → validate against Django model schema
+- [x] Test answer key accuracy: compare extracted `isCorrect` values against manual verification
 
 ---
 
@@ -923,7 +923,7 @@ Deferred — the JSON output format is generic enough to support `loaddata`, a c
 | 2 — Structured Parser | ✅ Complete | 2026-08-05 | 2026-08-05 | Tokenizer, SectionSplitter, QuestionBuilder state machine, unit tests passing |
 | 3 — Image Extraction | ✅ Complete | 2026-08-05 | 2026-08-05 | PdfImageExtractor & ImageAssociator created, 29 images extracted and linked |
 | 4 — JSON + CLI | ✅ Complete | 2026-08-05 | 2026-08-05 | JsonExporter & CLI flags (--output, --images-dir, --subject-code, --year, --term, --exam-type, --strict, --verbose, --pretty) |
-| 5 — Ktor Web GUI | ⬜ Not Started | | | JVM-only, no KMP |
-| 6 — Validation | ⬜ Not Started | | | |
+| 5 — Ktor Web GUI | ✅ Complete | 2026-08-05 | 2026-08-05 | Ktor Netty server, kotlinx.html drag-and-drop web UI, multipart upload, ZIP stream download, GET /api/health |
+| 6 — Validation | ✅ Complete | 2026-08-05 | 2026-08-05 | JsonValidator, --dry-run mode, ValidationTest end-to-end specimen verification, README.md |
 
 **Legend**: ⬜ Not Started · 🔄 In Progress · ✅ Complete · ⏸️ Blocked
