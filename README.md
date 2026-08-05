@@ -19,11 +19,12 @@ QuizOnConvertor is a high-performance Kotlin JVM library, CLI tool, and Ktor Web
 
 ## 🛠️ Technology Stack
 
-- **Language**: Kotlin 2.1.20 (JVM Toolchain 25)
-- **PDF Engine**: Apache PDFBox 3.0.4
-- **Serialization**: kotlinx.serialization (JSON)
+- **Language**: Kotlin 2.4.10 (JVM Toolchain 25)
+- **PDF Engine**: Apache PDFBox 3.0.8
+- **Serialization**: kotlinx.serialization 1.11.0 (JSON)
 - **Web Engine**: Ktor 3.5.1 Server (Netty Engine) + kotlinx.html DSL
-- **Build System**: Gradle 9.6.0 with Version Catalogs
+- **Logging**: Logback 1.6.1
+- **Build System**: Gradle 9.6.0 with Version Catalogs (`libs.versions.toml`)
 
 ---
 
