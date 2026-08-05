@@ -35,7 +35,7 @@ sealed interface Token {
         val optionId: String,
         val optionText: String
     ) : Token
-    data class PossibleAnswersHeader(override val line: ColoredLine) : Token
+    data class PossibleAnswersHeader(override val line: ColoredLine, val inlineAnswer: String? = null) : Token
     data class SaMetaLine(override val line: ColoredLine, val key: String, val value: String = "") : Token
     data class SubQuestionsHeader(override val line: ColoredLine) : Token
     data class IgnoredNoise(override val line: ColoredLine) : Token

@@ -31,7 +31,7 @@ object Patterns {
         """^(\d{10,})\.\s*(.*)$"""
     )
     val POSSIBLE_ANSWERS = Regex(
-        """^Possible Answers\s*:?$""",
+        """^Possible Answers\s*:?\s*(.*)$""",
         RegexOption.IGNORE_CASE
     )
     val SUBJECT_TITLE = Regex(
@@ -120,8 +120,9 @@ class LineClassifier {
         }
 
         // 8. Possible Answers Header
-        if (Patterns.POSSIBLE_ANSWERS.matches(trimmed)) {
-            return Token.PossibleAnswersHeader(line)
+        Patterns.POSSIBLE_ANSWERS.find(trimmed)?.let { match ->
+            val inlineAns = match.groupValues[1].trim()
+            return Token.PossibleAnswersHeader(line = line, inlineAnswer = inlineAns.ifEmpty { null })
         }
 
         // 9. Subject Title

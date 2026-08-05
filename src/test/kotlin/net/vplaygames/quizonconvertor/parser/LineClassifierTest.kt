@@ -86,6 +86,17 @@ class LineClassifierTest {
         )
         val token = classifier.classify(line)
         assertTrue(token is Token.PossibleAnswersHeader)
+        assertEquals(null, token.inlineAnswer)
+
+        val inlineLine = ColoredLine(
+            text = "Possible Answers : 10 to 10",
+            color = TextColor.BLACK,
+            y = 310f,
+            pageNum = 1
+        )
+        val inlineToken = classifier.classify(inlineLine)
+        assertTrue(inlineToken is Token.PossibleAnswersHeader)
+        assertEquals("10 to 10", inlineToken.inlineAnswer)
     }
 
     @Test

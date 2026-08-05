@@ -1,6 +1,5 @@
 package net.vplaygames.quizonconvertor.parser
 
-import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import net.vplaygames.quizonconvertor.extractor.ColoredLine
 import net.vplaygames.quizonconvertor.extractor.TextColor
@@ -67,7 +66,65 @@ class QuestionBuilderTest {
         assertEquals(4, q.marks)
         val ans = q.correctAnswer
         assertNotNull(ans)
-        assertEquals("35", ans.jsonObject["value"]?.jsonPrimitive?.content)
+        assertEquals("35", ans.jsonPrimitive.content)
+    }
+
+    @Test
+    fun testBuildSaQuestionWithRangeAnswer() {
+        val lines = listOf(
+            ColoredLine("Question Number : 52 Question Id : 640653902328 Question Type : SA", TextColor.BLACK, 10f, 1),
+            ColoredLine("Possible Answers :", TextColor.BLACK, 20f, 1),
+            ColoredLine("10 to 10", TextColor.BLACK, 30f, 1)
+        )
+
+        val tokens = classifier.classifyAll(lines)
+        val questions = builder.buildQuestions(tokens)
+
+        assertEquals(1, questions.size)
+        val q = questions.first()
+        assertEquals("nat", q.qType)
+        val ans = q.correctAnswer
+        assertNotNull(ans)
+        assertEquals("10", ans.jsonPrimitive.content)
+        assertEquals(null, q.natTolerance)
+    }
+
+    @Test
+    fun testBuildSaQuestionWithInlineRangeAnswer() {
+        val lines = listOf(
+            ColoredLine("Question Number : 53 Question Id : 640653902329 Question Type : SA", TextColor.BLACK, 10f, 1),
+            ColoredLine("Possible Answers : 10.5 to 10.5", TextColor.BLACK, 20f, 1)
+        )
+
+        val tokens = classifier.classifyAll(lines)
+        val questions = builder.buildQuestions(tokens)
+
+        assertEquals(1, questions.size)
+        val q = questions.first()
+        assertEquals("nat", q.qType)
+        val ans = q.correctAnswer
+        assertNotNull(ans)
+        assertEquals("10.5", ans.jsonPrimitive.content)
+        assertEquals(null, q.natTolerance)
+    }
+
+    @Test
+    fun testBuildSaQuestionWithRangeAndTolerance() {
+        val lines = listOf(
+            ColoredLine("Question Number : 54 Question Id : 640653902330 Question Type : SA", TextColor.BLACK, 10f, 1),
+            ColoredLine("Possible Answers : 10 to 12", TextColor.BLACK, 20f, 1)
+        )
+
+        val tokens = classifier.classifyAll(lines)
+        val questions = builder.buildQuestions(tokens)
+
+        assertEquals(1, questions.size)
+        val q = questions.first()
+        assertEquals("nat", q.qType)
+        val ans = q.correctAnswer
+        assertNotNull(ans)
+        assertEquals("10", ans.jsonPrimitive.content)
+        assertEquals(2.0, q.natTolerance)
     }
 
     @Test

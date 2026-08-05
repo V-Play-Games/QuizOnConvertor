@@ -1,8 +1,7 @@
 package net.vplaygames.quizonconvertor.parser
 
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
+import kotlinx.serialization.json.JsonPrimitive
 import net.vplaygames.quizonconvertor.extractor.TextColor
 import net.vplaygames.quizonconvertor.model.OptionData
 import net.vplaygames.quizonconvertor.model.QuestionData
@@ -32,7 +31,8 @@ class QuestionBuilder {
         var comprehensionParentId: String? = null,
         val textLines: MutableList<String> = mutableListOf(),
         val options: MutableList<MutableOption> = mutableListOf(),
-        var correctAnswer: JsonElement? = null
+        var correctAnswer: JsonElement? = null,
+        var natTolerance: Double? = null
     ) {
         fun build(order: Int): QuestionData {
             val cleanText = textLines.joinToString("\n").trim()
@@ -45,6 +45,7 @@ class QuestionBuilder {
                 explanation = "",
                 marks = marks,
                 negativeMarks = negativeMarks,
+                natTolerance = natTolerance,
                 options = options.map {
                     OptionData(
                         serial = it.serial,
@@ -59,6 +60,48 @@ class QuestionBuilder {
                 comprehensionParentId = comprehensionParentId
             )
         }
+    }
+
+    private fun parseAndSetNatAnswer(q: MutableQuestion, rawText: String) {
+        val trimmed = rawText.trim()
+        if (trimmed.isEmpty()) return
+
+        val primaryText = trimmed.split(",").first().trim()
+
+        val singleNum = primaryText.toDoubleOrNull()
+        if (singleNum != null) {
+            q.correctAnswer = if (singleNum % 1.0 == 0.0) {
+                JsonPrimitive(singleNum.toLong())
+            } else {
+                JsonPrimitive(singleNum)
+            }
+            return
+        }
+
+        val rangeRegex = Regex("""^([+-]?\d+(?:\.\d+)?)\s*(?:to|-|:)\s*([+-]?\d+(?:\.\d+)?)$""", RegexOption.IGNORE_CASE)
+        val match = rangeRegex.find(primaryText)
+        if (match != null) {
+            val minVal = match.groupValues[1].toDoubleOrNull()
+            val maxVal = match.groupValues[2].toDoubleOrNull()
+            if (minVal != null && maxVal != null) {
+                val min = minOf(minVal, maxVal)
+                val max = maxOf(minVal, maxVal)
+
+                q.correctAnswer = if (min % 1.0 == 0.0) {
+                    JsonPrimitive(min.toLong())
+                } else {
+                    JsonPrimitive(min)
+                }
+
+                if (min != max) {
+                    val tol = max - min
+                    q.natTolerance = if (tol % 1.0 == 0.0) tol else (Math.round(tol * 10000.0) / 10000.0)
+                }
+                return
+            }
+        }
+
+        q.correctAnswer = JsonPrimitive(primaryText)
     }
 
     fun buildQuestions(tokens: List<Token>): List<QuestionData> {
@@ -146,6 +189,12 @@ class QuestionBuilder {
 
                 is Token.PossibleAnswersHeader -> {
                     currentState = State.READING_SA_ANSWER
+                    token.inlineAnswer?.let { ansText ->
+                        currentQuestion?.let { q ->
+                            parseAndSetNatAnswer(q, ansText)
+                        }
+                        currentState = State.IDLE
+                    }
                 }
 
                 is Token.FreeText -> {
@@ -165,19 +214,7 @@ class QuestionBuilder {
 
                         State.READING_SA_ANSWER -> {
                             currentQuestion?.let { q ->
-                                val valStr = token.line.text.trim()
-                                val numVal = valStr.toDoubleOrNull()
-                                q.correctAnswer = buildJsonObject {
-                                    if (numVal != null) {
-                                        if (numVal % 1.0 == 0.0) {
-                                            put("value", numVal.toLong())
-                                        } else {
-                                            put("value", numVal)
-                                        }
-                                    } else {
-                                        put("value", valStr)
-                                    }
-                                }
+                                parseAndSetNatAnswer(q, token.line.text)
                             }
                             currentState = State.IDLE
                         }

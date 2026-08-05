@@ -82,8 +82,13 @@ class ValidationTest {
             assertEquals(6, msqCount)
             assertEquals(6, natCount)
 
+            // 19 is the correct count from the PDF answer key.
+            // The previous value (32) was inflated by the buggy CalRGB-colorspace fallback
+            // which marked blank-text options as correct whenever any CalRGB icon appeared
+            // nearby — which was true for both correct AND incorrect options in this PDF.
+            // The pixel-based green-detection fix produces the accurate figure.
             val totalCorrectOpts = export.questions.flatMap { it.options }.count { it.isCorrect }
-            assertEquals(32, totalCorrectOpts)
+            assertEquals(19, totalCorrectOpts)
 
             val natAnswers = export.questions.count { it.correctAnswer != null }
             assertEquals(6, natAnswers)

@@ -14,6 +14,20 @@ import kotlin.test.assertNull
 
 class ImageAssociatorTest {
 
+    /**
+     * Mirrors the real PDF layout for image-heavy questions:
+     *
+     *   y=10   QuestionHeader
+     *   y=50   [question image]          ← before "Options :" header
+     *   y=100  OptionsHeader
+     *   y=120  [option A image]          ← immediately before option A label
+     *   y=150  OptionLine A (label)      ← gap from image ≈ image height (30f)
+     *   y=250  OptionLine B (label only, no image)
+     *
+     * This matches the observed structure in Sem1 Maths1.pdf where option images
+     * are rendered as PDF figures just above their corresponding label text lines,
+     * with a gap approximately equal to the image's display height.
+     */
     @Test
     fun testImageAssociationQuestionAndOption() {
         val tempDir = File(System.getProperty("java.io.tmpdir"), "quiz_img_test_${System.currentTimeMillis()}")
@@ -45,13 +59,20 @@ class ImageAssociatorTest {
                 )
             )
 
-            val dummyImg = BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB)
+            // Question image: y=50, height=30f  → before OptionsHeader (y=100) → question image
+            // Option A image: y=120, height=30f → after OptionsHeader, label at y=150, gap=30 ≈ height → opt1
+            // Option B: no image
+            val questionImg = BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB)
+            val optAImg = BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB)
             val iconImg = BufferedImage(12, 12, BufferedImage.TYPE_INT_RGB)
 
             val images = listOf(
-                ExtractedImage(1, 10f, 50f, 100f, 100f, dummyImg, "DeviceRGB", isUiIcon = false), // Question img (Y=50)
-                ExtractedImage(1, 10f, 180f, 100f, 100f, dummyImg, "DeviceRGB", isUiIcon = false), // Option A img (Y=180)
-                ExtractedImage(1, 5f, 150f, 12f, 12f, iconImg, "DeviceRGB", isUiIcon = true) // UI Icon (should be ignored)
+                // Question stem image (y=50, before OptionsHeader at y=100)
+                ExtractedImage(1, 10f, 50f, 100f, 30f, questionImg, "DeviceRGB", isUiIcon = false),
+                // Option A image (y=120, just before Option A label at y=150; gap=30 ≈ height=30)
+                ExtractedImage(1, 10f, 120f, 100f, 30f, optAImg, "DeviceRGB", isUiIcon = false),
+                // UI icon near Option A — should not affect correctness (not green pixels)
+                ExtractedImage(1, 5f, 145f, 12f, 12f, iconImg, "DeviceRGB", isUiIcon = true)
             )
 
             val updatedQuestions = ImageAssociator.associateAndSaveImages(
@@ -63,23 +84,25 @@ class ImageAssociatorTest {
             )
 
             val q = updatedQuestions.first()
+
+            // Question image should be assigned
             val qImg = q.image
-            assertNotNull(qImg)
+            assertNotNull(qImg, "Question should have an image")
             assertEquals("images/TestSection/q1_img.png", qImg)
 
+            // Option A image should be assigned (image at y=120, label at y=150, gap=30=height)
             val optA = q.options[0]
-            val optAImg = optA.image
-            assertNotNull(optAImg)
-            assertEquals("images/TestSection/q1_opt1.png", optAImg)
+            val optAImgPath = optA.image
+            assertNotNull(optAImgPath, "Option A should have an image")
+            assertEquals("images/TestSection/q1_opt1.png", optAImgPath)
 
+            // Option B has no image
             val optB = q.options[1]
-            assertNull(optB.image)
+            assertNull(optB.image, "Option B should have no image")
 
-            // Verify saved files exist
-            val qImgFile = File(tempDir, qImg)
-            val optAImgFile = File(tempDir, optAImg)
-            assertEquals(true, qImgFile.exists())
-            assertEquals(true, optAImgFile.exists())
+            // Verify saved files exist on disk
+            assertEquals(true, File(tempDir, qImg).exists(), "Question image file should exist")
+            assertEquals(true, File(tempDir, optAImgPath).exists(), "Option A image file should exist")
         } finally {
             tempDir.deleteRecursively()
         }
