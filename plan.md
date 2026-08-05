@@ -614,19 +614,19 @@ If inline image extraction proves unreliable, fall back to:
 
 ### TODO
 
-- [ ] Create `serializer/JsonExporter.kt`
+- [x] Create `serializer/JsonExporter.kt`
   - Function: `fun export(sections: List<QuizExport>, outputDir: File)`
   - Writes one `{section_name}.json` per section
   - Uses `Json { prettyPrint = true; encodeDefaults = true }` for readability
   - Generates `conversion_report.txt` with summary and warnings
-- [ ] Update `Main.kt` for full CLI workflow:
+- [x] Update `Main.kt` for full CLI workflow:
   ```
   ./gradlew run --args="'Sem1 Maths1.pdf' --output ./output"
   ```
-- [ ] Add `--images-dir` flag to control image output location
-- [ ] Add `--subject-code`, `--year`, `--term`, `--exam-type` CLI flags for metadata not extractable from PDF
-- [ ] Print summary after conversion: N sections, N questions per section, N correct answers found, N images, N warnings
-- [ ] Test full pipeline: PDF → JSON, validate JSON structure
+- [x] Add `--images-dir` flag to control image output location
+- [x] Add `--subject-code`, `--year`, `--term`, `--exam-type` CLI flags for metadata not extractable from PDF
+- [x] Print summary after conversion: N sections, N questions per section, N correct answers found, N images, N warnings
+- [x] Test full pipeline: PDF → JSON, validate JSON structure
 
 ### CLI Interface
 
@@ -922,7 +922,7 @@ Deferred — the JSON output format is generic enough to support `loaddata`, a c
 | 1 — Color-Aware Extractor | ✅ Complete | 2026-08-05 | 2026-08-05 | Key differentiator: color → answer key |
 | 2 — Structured Parser | ✅ Complete | 2026-08-05 | 2026-08-05 | Tokenizer, SectionSplitter, QuestionBuilder state machine, unit tests passing |
 | 3 — Image Extraction | ✅ Complete | 2026-08-05 | 2026-08-05 | PdfImageExtractor & ImageAssociator created, 29 images extracted and linked |
-| 4 — JSON + CLI | ⬜ Not Started | | | |
+| 4 — JSON + CLI | ✅ Complete | 2026-08-05 | 2026-08-05 | JsonExporter & CLI flags (--output, --images-dir, --subject-code, --year, --term, --exam-type, --strict, --verbose, --pretty) |
 | 5 — Ktor Web GUI | ⬜ Not Started | | | JVM-only, no KMP |
 | 6 — Validation | ⬜ Not Started | | | |
 
