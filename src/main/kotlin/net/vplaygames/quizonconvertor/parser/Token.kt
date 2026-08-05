@@ -5,7 +5,6 @@ import net.vplaygames.quizonconvertor.extractor.ColoredLine
 sealed interface Token {
     val line: ColoredLine
 
-    data class SectionHeader(override val line: ColoredLine, val sectionName: String) : Token
     data class SectionMeta(override val line: ColoredLine, val key: String, val value: String = "") : Token
     data class QuestionHeader(
         override val line: ColoredLine,

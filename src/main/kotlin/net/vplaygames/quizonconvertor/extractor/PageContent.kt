@@ -7,14 +7,6 @@ enum class TextColor {
     UNKNOWN
 }
 
-data class ColoredChar(
-    val char: String,
-    val color: TextColor,
-    val x: Float,
-    val y: Float,
-    val pageNum: Int
-)
-
 data class ColoredLine(
     val text: String,
     val color: TextColor,

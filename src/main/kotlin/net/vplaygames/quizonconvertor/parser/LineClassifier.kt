@@ -19,10 +19,6 @@ object Patterns {
         """Correct Marks\s*:\s*(\d+)(?:\s+Max\.\s*Selectable\s*Options\s*:\s*(\d+))?""",
         RegexOption.IGNORE_CASE
     )
-    val MAX_SELECTABLE = Regex(
-        """Max\.\s*Selectable\s*Options\s*:\s*(\d+)""",
-        RegexOption.IGNORE_CASE
-    )
     val QUESTION_LABEL = Regex(
         """Question Label\s*:\s*(.+)""",
         RegexOption.IGNORE_CASE
