@@ -63,6 +63,21 @@ object JsonValidator {
             }
         }
 
+        // 4. Comprehension validation
+        val compIds = export.comprehensions.map { it.sourceId }.toSet()
+        export.questions.forEach { question ->
+            val parentId = question.comprehensionParentId
+            if (parentId != null && parentId !in compIds) {
+                warnings.add("Question #${question.order} references comprehension '$parentId' which was not found in export")
+            }
+        }
+
+        export.comprehensions.forEach { comp ->
+            if (comp.text.isBlank() && comp.image == null) {
+                warnings.add("Comprehension passage '${comp.sourceId}' has both empty text and no diagram image")
+            }
+        }
+
         return ValidationResult(
             isValid = errors.isEmpty(),
             errors = errors,

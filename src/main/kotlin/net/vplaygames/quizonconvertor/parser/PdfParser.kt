@@ -40,7 +40,9 @@ object PdfParser {
 
         for ((sectionName, lines) in sectionContents) {
             val tokens = lineClassifier.classifyAll(lines)
-            var questions = questionBuilder.buildQuestions(tokens)
+            val buildResult = questionBuilder.buildAll(tokens)
+            var questions = buildResult.questions
+            var comprehensions = buildResult.comprehensions
 
             if (questions.isEmpty()) {
                 val lastToken = tokens.lastOrNull()?.let { it::class.simpleName } ?: "None"
@@ -53,13 +55,16 @@ object PdfParser {
             }
 
             if (images.isNotEmpty()) {
-                questions = ImageAssociator.associateAndSaveImages(
+                val assocResult = ImageAssociator.associateAndSaveImages(
                     questions = questions,
+                    comprehensions = comprehensions,
                     tokens = tokens,
                     allImages = images,
                     outputDir = outputDir,
                     sectionName = sectionName
                 )
+                questions = assocResult.questions
+                comprehensions = assocResult.comprehensions
             }
 
             val subject = extractSubjectData(sectionName, tokens)
@@ -70,6 +75,7 @@ object PdfParser {
                     subject = subject,
                     paper = paper,
                     questions = questions,
+                    comprehensions = comprehensions,
                     tags = emptyList()
                 )
             )

@@ -107,4 +107,52 @@ class ImageAssociatorTest {
             tempDir.deleteRecursively()
         }
     }
+
+    @Test
+    fun testComprehensionImageAssociation() {
+        val tempDir = File(System.getProperty("java.io.tmpdir"), "quiz_comp_img_test_${System.currentTimeMillis()}")
+        tempDir.mkdirs()
+
+        try {
+            val lines = listOf(
+                ColoredLine("Question Id : 201 Question Type : COMPREHENSION", TextColor.BLACK, 10f, 1),
+                ColoredLine("Question Numbers : (1 to 2)", TextColor.BLACK, 20f, 1),
+                ColoredLine("Passage text line", TextColor.BLACK, 30f, 1),
+                ColoredLine("Question Number : 1 Question Id : 101 Question Type : MCQ", TextColor.BLACK, 150f, 1)
+            )
+            val classifier = LineClassifier()
+            val tokens = classifier.classifyAll(lines)
+
+            val initialComps = listOf(
+                net.vplaygames.quizonconvertor.model.ComprehensionData(
+                    sourceId = "201",
+                    text = "Passage text line",
+                    questionNumbers = listOf(1, 2)
+                )
+            )
+
+            val compImg = BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB)
+            val images = listOf(
+                ExtractedImage(1, 10f, 50f, 100f, 50f, compImg, "DeviceRGB", isUiIcon = false)
+            )
+
+            val assocResult = ImageAssociator.associateAndSaveImages(
+                questions = emptyList(),
+                comprehensions = initialComps,
+                tokens = tokens,
+                allImages = images,
+                outputDir = tempDir,
+                sectionName = "TestCompSection"
+            )
+
+            assertEquals(1, assocResult.comprehensions.size)
+            val comp = assocResult.comprehensions.first()
+            val compImgPath = comp.image
+            assertNotNull(compImgPath, "Comprehension should have an image")
+            assertEquals("images/TestCompSection/comp_201_img.png", compImgPath)
+            assertEquals(true, File(tempDir, compImgPath).exists(), "Comprehension image file should exist")
+        } finally {
+            tempDir.deleteRecursively()
+        }
+    }
 }

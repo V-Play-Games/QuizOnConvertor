@@ -1,11 +1,17 @@
 package net.vplaygames.quizonconvertor.parser
 
 import net.vplaygames.quizonconvertor.extractor.ExtractedImage
+import net.vplaygames.quizonconvertor.model.ComprehensionData
 import net.vplaygames.quizonconvertor.model.QuestionData
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
 import kotlin.math.abs
+
+data class ImageAssociationResult(
+    val questions: List<QuestionData>,
+    val comprehensions: List<ComprehensionData>
+)
 
 object ImageAssociator {
 
@@ -16,6 +22,24 @@ object ImageAssociator {
         outputDir: File,
         sectionName: String
     ): List<QuestionData> {
+        return associateAndSaveImages(
+            questions = questions,
+            comprehensions = emptyList(),
+            tokens = tokens,
+            allImages = allImages,
+            outputDir = outputDir,
+            sectionName = sectionName
+        ).questions
+    }
+
+    fun associateAndSaveImages(
+        questions: List<QuestionData>,
+        comprehensions: List<ComprehensionData>,
+        tokens: List<Token>,
+        allImages: List<ExtractedImage>,
+        outputDir: File,
+        sectionName: String
+    ): ImageAssociationResult {
         val sanitizedSection = sanitizeFileName(sectionName)
         val relativeImageDir = "images/$sanitizedSection"
         val targetDir = File(outputDir, relativeImageDir)
@@ -26,14 +50,36 @@ object ImageAssociator {
         val contentImages = allImages.filter { !it.isUiIcon }
         val iconImages = allImages.filter { it.isUiIcon }
 
-        // Build question bounds map (questionOrder -> QuestionBound)
+        // Build question and comprehension bounds maps
         val questionBounds = buildQuestionBounds(tokens, questions)
+        val comprehensionBounds = buildComprehensionBounds(tokens, comprehensions)
 
         val questionImageMap = mutableMapOf<Int, String>() // order -> relativePath
         val optionImageMap = mutableMapOf<Pair<Int, Int>, String>() // (order, serial) -> relativePath
+        val comprehensionImageMap = mutableMapOf<String, String>() // sourceId -> relativePath
         val optionCorrectnessFallback = mutableMapOf<Pair<Int, Int>, Boolean>() // (order, serial) -> isCorrect
 
         for (img in contentImages) {
+            // Check if image belongs to a comprehension passage block
+            val compBound = comprehensionBounds.find { b ->
+                img.pageNum in b.startPage..b.endPage &&
+                    (img.pageNum > b.startPage || img.y >= b.startY - 10f) &&
+                    (img.pageNum < b.endPage || b.endY == null || img.y <= b.endY + 10f)
+            }
+
+            if (compBound != null) {
+                val fileName = "comp_${sanitizeFileName(compBound.sourceId)}_img.png"
+                val relPath = "$relativeImageDir/$fileName"
+                comprehensionImageMap[compBound.sourceId] = relPath
+                val imageFile = File(targetDir, fileName)
+                try {
+                    ImageIO.write(img.image, "png", imageFile)
+                } catch (e: Exception) {
+                    System.err.println("Warning: Failed to save extracted comprehension image to ${imageFile.absolutePath}: ${e.message}")
+                }
+                continue
+            }
+
             val bound = questionBounds.find { b ->
                 img.pageNum in b.startPage..b.endPage &&
                     (img.pageNum > b.startPage || img.y >= b.startY - 10f) &&
@@ -133,7 +179,7 @@ object ImageAssociator {
         }
 
         // Apply extracted images and correctness fallbacks to QuestionData
-        return questions.map { q ->
+        val updatedQuestions = questions.map { q ->
             val qImg = questionImageMap[q.order] ?: q.image
             val updatedOptions = q.options.map { opt ->
                 val optImg = optionImageMap[Pair(q.order, opt.serial)] ?: opt.image
@@ -142,6 +188,56 @@ object ImageAssociator {
             }
             q.copy(image = qImg, options = updatedOptions)
         }
+
+        val updatedComprehensions = comprehensions.map { c ->
+            val cImg = comprehensionImageMap[c.sourceId] ?: c.image
+            c.copy(image = cImg)
+        }
+
+        return ImageAssociationResult(
+            questions = updatedQuestions,
+            comprehensions = updatedComprehensions
+        )
+    }
+
+    private data class ComprehensionBound(
+        val sourceId: String,
+        val startPage: Int,
+        val startY: Float,
+        val endPage: Int,
+        val endY: Float?
+    )
+
+    private fun buildComprehensionBounds(tokens: List<Token>, comprehensions: List<ComprehensionData>): List<ComprehensionBound> {
+        val compHeaderTokens = tokens.filterIsInstance<Token.ComprehensionHeader>()
+        val bounds = mutableListOf<ComprehensionBound>()
+
+        for (i in compHeaderTokens.indices) {
+            val currentHeader = compHeaderTokens[i]
+            val matchingC = comprehensions.find { it.sourceId == currentHeader.id } ?: continue
+
+            val headerIndex = tokens.indexOf(currentHeader)
+            val nextHeader = tokens.subList(headerIndex, tokens.size)
+                .filterIsInstance<Token.QuestionHeader>()
+                .firstOrNull()
+
+            val startPage = currentHeader.line.pageNum
+            val startY = currentHeader.line.y
+
+            val endPage = nextHeader?.line?.pageNum ?: (startPage + 2)
+            val endY = nextHeader?.line?.y
+
+            bounds.add(
+                ComprehensionBound(
+                    sourceId = matchingC.sourceId,
+                    startPage = startPage,
+                    startY = startY,
+                    endPage = endPage,
+                    endY = endY
+                )
+            )
+        }
+        return bounds
     }
 
     private data class QuestionBound(

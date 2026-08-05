@@ -3,8 +3,14 @@ package net.vplaygames.quizonconvertor.parser
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import net.vplaygames.quizonconvertor.extractor.TextColor
+import net.vplaygames.quizonconvertor.model.ComprehensionData
 import net.vplaygames.quizonconvertor.model.OptionData
 import net.vplaygames.quizonconvertor.model.QuestionData
+
+data class BuildResult(
+    val questions: List<QuestionData>,
+    val comprehensions: List<ComprehensionData>
+)
 
 class QuestionBuilder {
 
@@ -12,7 +18,8 @@ class QuestionBuilder {
         IDLE,
         READING_QUESTION_TEXT,
         READING_OPTIONS,
-        READING_SA_ANSWER
+        READING_SA_ANSWER,
+        READING_COMPREHENSION_TEXT
     }
 
     private data class MutableOption(
@@ -21,6 +28,23 @@ class QuestionBuilder {
         var isCorrect: Boolean,
         val sourceOptionId: String
     )
+
+    private data class MutableComprehension(
+        var sourceId: String = "",
+        val textLines: MutableList<String> = mutableListOf(),
+        var startNumber: Int = 0,
+        var endNumber: Int = 0
+    ) {
+        fun build(): ComprehensionData {
+            val qNums = if (startNumber > 0 && endNumber >= startNumber) (startNumber..endNumber).toList() else emptyList()
+            return ComprehensionData(
+                sourceId = sourceId,
+                text = textLines.joinToString("\n").trim(),
+                image = null,
+                questionNumbers = qNums
+            )
+        }
+    }
 
     private data class MutableQuestion(
         var sourceQuestionNumber: Int = 0,
@@ -105,9 +129,15 @@ class QuestionBuilder {
     }
 
     fun buildQuestions(tokens: List<Token>): List<QuestionData> {
+        return buildAll(tokens).questions
+    }
+
+    fun buildAll(tokens: List<Token>): BuildResult {
         val questions = mutableListOf<QuestionData>()
+        val comprehensions = mutableListOf<ComprehensionData>()
 
         var currentQuestion: MutableQuestion? = null
+        var currentComprehension: MutableComprehension? = null
         var currentState = State.IDLE
 
         var activeComprehensionId: String? = null
@@ -122,10 +152,20 @@ class QuestionBuilder {
             currentQuestion = null
         }
 
+        fun flushCurrentComprehension() {
+            currentComprehension?.let { c ->
+                if (c.sourceId.isNotEmpty()) {
+                    comprehensions.add(c.build())
+                }
+            }
+            currentComprehension = null
+        }
+
         for (token in tokens) {
             when (token) {
                 is Token.QuestionHeader -> {
                     flushCurrentQuestion()
+                    flushCurrentComprehension()
 
                     // Clear comprehension if current question number is beyond range
                     val range = activeComprehensionRange
@@ -156,12 +196,24 @@ class QuestionBuilder {
 
                 is Token.ComprehensionHeader -> {
                     flushCurrentQuestion()
+                    flushCurrentComprehension()
                     activeComprehensionId = token.id
-                    currentState = State.IDLE
+                    currentComprehension = MutableComprehension(sourceId = token.id)
+                    currentState = State.READING_COMPREHENSION_TEXT
                 }
 
                 is Token.ComprehensionRange -> {
                     activeComprehensionRange = token.startNumber..token.endNumber
+                    currentComprehension?.let { c ->
+                        c.startNumber = token.startNumber
+                        c.endNumber = token.endNumber
+                    }
+                }
+
+                is Token.SubQuestionsHeader -> {
+                    if (currentState == State.READING_COMPREHENSION_TEXT) {
+                        currentState = State.IDLE
+                    }
                 }
 
                 is Token.CorrectMarks -> {
@@ -199,6 +251,10 @@ class QuestionBuilder {
 
                 is Token.FreeText -> {
                     when (currentState) {
+                        State.READING_COMPREHENSION_TEXT -> {
+                            currentComprehension?.textLines?.add(token.line.text)
+                        }
+
                         State.READING_QUESTION_TEXT -> {
                             currentQuestion?.textLines?.add(token.line.text)
                         }
@@ -232,6 +288,7 @@ class QuestionBuilder {
         }
 
         flushCurrentQuestion()
-        return questions
+        flushCurrentComprehension()
+        return BuildResult(questions = questions, comprehensions = comprehensions)
     }
 }

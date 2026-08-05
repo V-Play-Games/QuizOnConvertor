@@ -132,6 +132,9 @@ class QuestionBuilderTest {
         val lines = listOf(
             ColoredLine("Question Id : 640653902328 Question Type : COMPREHENSION", TextColor.BLACK, 10f, 1),
             ColoredLine("Question Numbers : (53 to 54)", TextColor.BLACK, 20f, 1),
+            ColoredLine("Read the following passage carefully:", TextColor.BLACK, 22f, 1),
+            ColoredLine("This is paragraph 1 of the comprehension passage.", TextColor.BLACK, 24f, 1),
+            ColoredLine("Sub questions", TextColor.BLACK, 26f, 1),
             ColoredLine("Question Number : 53 Question Id : 640653902329 Question Type : MCQ", TextColor.BLACK, 30f, 1),
             ColoredLine("Correct Marks : 4", TextColor.BLACK, 40f, 1),
             ColoredLine("Options :", TextColor.BLACK, 50f, 1),
@@ -143,13 +146,19 @@ class QuestionBuilderTest {
         )
 
         val tokens = classifier.classifyAll(lines)
-        val questions = builder.buildQuestions(tokens)
+        val buildResult = builder.buildAll(tokens)
 
-        assertEquals(2, questions.size)
-        assertEquals("640653902328", questions[0].comprehensionParentId)
-        assertEquals("640653902328", questions[1].comprehensionParentId)
-        assertEquals("mcq", questions[0].qType)
-        assertEquals("nat", questions[1].qType)
+        assertEquals(2, buildResult.questions.size)
+        assertEquals("640653902328", buildResult.questions[0].comprehensionParentId)
+        assertEquals("640653902328", buildResult.questions[1].comprehensionParentId)
+        assertEquals("mcq", buildResult.questions[0].qType)
+        assertEquals("nat", buildResult.questions[1].qType)
+
+        assertEquals(1, buildResult.comprehensions.size)
+        val comp = buildResult.comprehensions.first()
+        assertEquals("640653902328", comp.sourceId)
+        assertEquals("Read the following passage carefully:\nThis is paragraph 1 of the comprehension passage.", comp.text)
+        assertEquals(listOf(53, 54), comp.questionNumbers)
     }
 
     @Test

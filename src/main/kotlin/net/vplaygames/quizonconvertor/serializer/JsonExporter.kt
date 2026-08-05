@@ -52,11 +52,15 @@ object JsonExporter {
             val natAnswers = export.questions.count { it.correctAnswer != null }
             val questionImages = export.questions.count { it.image != null }
             val optionImages = totalOptions.count { it.image != null }
+            val compPassages = export.comprehensions.size
+            val compImages = export.comprehensions.count { it.image != null }
 
             reportLines.add("  - Correct Options Identified: $correctOpts")
             reportLines.add("  - Correct NAT Answers Identified: $natAnswers")
             reportLines.add("  - Question Diagrams Extracted: $questionImages")
             reportLines.add("  - Option Images Extracted: $optionImages")
+            reportLines.add("  - Comprehension Passages: $compPassages")
+            reportLines.add("  - Passage Images Extracted: $compImages")
             reportLines.add("")
         }
 
