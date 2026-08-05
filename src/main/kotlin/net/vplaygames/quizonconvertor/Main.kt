@@ -1,7 +1,7 @@
 package net.vplaygames.quizonconvertor
 
-import net.vplaygames.quizonconvertor.extractor.PdfTextExtractor
-import net.vplaygames.quizonconvertor.extractor.TextColor
+import net.vplaygames.quizonconvertor.parser.ConversionError
+import net.vplaygames.quizonconvertor.parser.PdfParser
 import java.io.File
 
 fun main(args: Array<String>) {
@@ -13,33 +13,36 @@ fun main(args: Array<String>) {
         return
     }
 
-    println("Extracting color-annotated text from: ${pdfFile.absolutePath}")
-    val pages = PdfTextExtractor.extractText(pdfFile)
+    println("Parsing PDF into structured data: ${pdfFile.absolutePath}")
+    try {
+        val exports = PdfParser.parse(pdfFile, strict = false)
 
-    var totalLines = 0
-    var greenLines = 0
-    var redLines = 0
-    var blackLines = 0
+        println("\n=== Parsing Summary ===")
+        println("Total Sections Extracted: ${exports.size}")
 
-    pages.forEach { page ->
-        println("--- Page ${page.pageNumber} (${page.lines.size} lines) ---")
-        page.lines.forEach { line ->
-            totalLines++
-            when (line.color) {
-                TextColor.GREEN -> greenLines++
-                TextColor.RED -> redLines++
-                TextColor.BLACK -> blackLines++
-                else -> {}
-            }
-            val tag = "[${line.color.name.padEnd(5)}]"
-            println("$tag ${line.text}")
+        exports.forEachIndexed { idx, export ->
+            println("\n--- Section ${idx + 1}: ${export.paper.title} ---")
+            println("Subject: ${export.subject.subject} (Level: ${export.subject.level})")
+            println("Total Questions: ${export.questions.size}")
+
+            val mcqCount = export.questions.count { it.qType == "mcq" }
+            val msqCount = export.questions.count { it.qType == "msq" }
+            val natCount = export.questions.count { it.qType == "nat" }
+
+            println("  - MCQ Questions: $mcqCount")
+            println("  - MSQ Questions: $msqCount")
+            println("  - NAT Questions: $natCount")
+
+            val optionsWithAnswerKey = export.questions.flatMap { it.options }.count { it.isCorrect }
+            val natWithAnswerKey = export.questions.count { it.correctAnswer != null }
+            println("  - Correct Options Identified: $optionsWithAnswerKey")
+            println("  - Correct NAT Answers Identified: $natWithAnswerKey")
         }
+    } catch (e: ConversionError) {
+        println("Conversion Error: ${e.message}")
+    } catch (e: Exception) {
+        println("Unexpected Error during parsing: ${e.message}")
+        e.printStackTrace()
     }
-
-    println("\n=== Extraction Summary ===")
-    println("Total Pages: ${pages.size}")
-    println("Total Lines: $totalLines")
-    println("Black Lines: $blackLines")
-    println("Green Lines: $greenLines")
-    println("Red Lines:   $redLines")
 }
+

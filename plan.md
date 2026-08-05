@@ -541,18 +541,18 @@ object Patterns {
 
 ### TODO
 
-- [ ] Create `parser/LineClassifier.kt` — classifies raw lines into token types (now color-aware)
-- [ ] Create `parser/SectionSplitter.kt` — splits document into per-section content
-- [ ] Create `parser/QuestionBuilder.kt` — state machine that accumulates tokens into `QuestionData`
+- [x] Create `parser/LineClassifier.kt` — classifies raw lines into token types (now color-aware)
+- [x] Create `parser/SectionSplitter.kt` — splits document into per-section content
+- [x] Create `parser/QuestionBuilder.kt` — state machine that accumulates tokens into `QuestionData`
   - Uses `TextColor.GREEN` on option lines to set `isCorrect = true`
   - Uses `TextColor.GREEN` on SA answer values to populate `correctAnswer`
-- [ ] Create `parser/PdfParser.kt` — orchestrator: extractor → splitter → classifier → builder → `List<QuizExport>`
-- [ ] Handle multi-line question text (text spanning until next known token)
-- [ ] Handle COMPREHENSION parent-child linking
-- [ ] Handle cross-page question continuation
-- [ ] Handle empty-text questions (image-only) — mark as needing image
-- [ ] Implement section validation — throw errors on incomplete sections with diagnostics
-- [ ] Write unit tests with hardcoded text snippets (including color annotations)
+- [x] Create `parser/PdfParser.kt` — orchestrator: extractor → splitter → classifier → builder → `List<QuizExport>`
+- [x] Handle multi-line question text (text spanning until next known token)
+- [x] Handle COMPREHENSION parent-child linking
+- [x] Handle cross-page question continuation
+- [x] Handle empty-text questions (image-only) — mark as needing image
+- [x] Implement section validation — throw errors on incomplete sections with diagnostics
+- [x] Write unit tests with hardcoded text snippets (including color annotations)
 
 ### Edge Cases to Handle
 
@@ -920,7 +920,7 @@ Deferred — the JSON output format is generic enough to support `loaddata`, a c
 |-------|--------|---------|-----------|-------|
 | 0 — Scaffolding | ✅ Complete | 2026-08-05 | 2026-08-05 | Project initialized, builds cleanly |
 | 1 — Color-Aware Extractor | ✅ Complete | 2026-08-05 | 2026-08-05 | Key differentiator: color → answer key |
-| 2 — Structured Parser | ⬜ Not Started | | | Per-section output, error on incomplete |
+| 2 — Structured Parser | ✅ Complete | 2026-08-05 | 2026-08-05 | Tokenizer, SectionSplitter, QuestionBuilder state machine, unit tests passing |
 | 3 — Image Extraction | ⬜ Not Started | | | |
 | 4 — JSON + CLI | ⬜ Not Started | | | |
 | 5 — Ktor Web GUI | ⬜ Not Started | | | JVM-only, no KMP |
