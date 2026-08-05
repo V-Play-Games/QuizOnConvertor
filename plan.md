@@ -313,20 +313,20 @@ ktor = { id = "io.ktor.plugin", version.ref = "ktor" }
 
 ### TODO
 
-- [ ] Create `extractor/ColorTextStripper.kt` — custom `PDFTextStripper` subclass that captures text color
+- [x] Create `extractor/ColorTextStripper.kt` — custom `PDFTextStripper` subclass that captures text color
   - Override `processTextPosition()` to read `graphicsState.nonStrokingColor`
   - Register color operators: `SetNonStrokingColor`, `SetNonStrokingRGBColor`, `SetNonStrokingDeviceGrayColor`, etc.
   - Produce `List<ColoredLine>` instead of plain text
-- [ ] Create `extractor/PdfTextExtractor.kt`
+- [x] Create `extractor/PdfTextExtractor.kt`
   - Function: `fun extractText(pdfFile: File): List<PageContent>`
   - `PageContent` = `data class PageContent(val pageNumber: Int, val lines: List<ColoredLine>)`
   - `ColoredLine` = `data class ColoredLine(val text: String, val color: TextColor, val y: Float)`
   - `TextColor` = `enum class TextColor { BLACK, GREEN, RED, UNKNOWN }`
-- [ ] Wire up `Main.kt` to accept a file path argument and print extracted text with color annotations
-- [ ] Test against `Sem1 Maths1.pdf`:
+- [x] Wire up `Main.kt` to accept a file path argument and print extracted text with color annotations
+- [x] Test against `Sem1 Maths1.pdf`:
   - Verify text matches Python pdfplumber extraction
   - Verify green/red classification matches the proven color values
-- [ ] Document any text extraction quirks (encoding, ligatures, line breaks)
+- [x] Document any text extraction quirks (encoding, ligatures, line breaks)
 
 ### Key Implementation Detail — Color-Aware Stripper
 
@@ -919,7 +919,7 @@ Deferred — the JSON output format is generic enough to support `loaddata`, a c
 | Phase | Status | Started | Completed | Notes |
 |-------|--------|---------|-----------|-------|
 | 0 — Scaffolding | ✅ Complete | 2026-08-05 | 2026-08-05 | Project initialized, builds cleanly |
-| 1 — Color-Aware Extractor | 🔄 In Progress | 2026-08-05 | | Key differentiator: color → answer key |
+| 1 — Color-Aware Extractor | ✅ Complete | 2026-08-05 | 2026-08-05 | Key differentiator: color → answer key |
 | 2 — Structured Parser | ⬜ Not Started | | | Per-section output, error on incomplete |
 | 3 — Image Extraction | ⬜ Not Started | | | |
 | 4 — JSON + CLI | ⬜ Not Started | | | |
