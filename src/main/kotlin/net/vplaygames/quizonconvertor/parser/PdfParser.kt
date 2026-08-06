@@ -11,23 +11,36 @@ import java.io.File
 
 object PdfParser {
 
-    fun parse(pdfFile: File, outputDir: File = File("output"), strict: Boolean = false): List<QuizExport> {
+    fun parse(
+        pdfFile: File,
+        outputDir: File = File("output"),
+        strict: Boolean = false,
+        progressCallback: ((step: String, detail: String, percent: Int) -> Unit)? = null
+    ): List<QuizExport> {
+        progressCallback?.invoke("Extracting text", "Reading PDF document...", 5)
         val pages = PdfTextExtractor.extractText(pdfFile)
+        progressCallback?.invoke("Extracted text", "${pages.size} page(s) read", 20)
+
+        progressCallback?.invoke("Extracting images", "Searching for embedded diagrams...", 25)
         val images = try {
             PdfImageExtractor.extractImages(pdfFile)
         } catch (e: Exception) {
             System.err.println("Warning: Could not extract images from PDF: ${e.message}")
             emptyList()
         }
-        return parsePages(pages, images, outputDir, strict)
+        progressCallback?.invoke("Extracted images", "${images.size} image(s) found", 35)
+
+        return parsePages(pages, images, outputDir, strict, progressCallback)
     }
 
     fun parsePages(
         pages: List<PageContent>,
         images: List<ExtractedImage> = emptyList(),
         outputDir: File = File("output"),
-        strict: Boolean = false
+        strict: Boolean = false,
+        progressCallback: ((step: String, detail: String, percent: Int) -> Unit)? = null
     ): List<QuizExport> {
+        progressCallback?.invoke("Splitting sections", "Grouping page contents by section...", 40)
         val sectionContents = SectionSplitter.splitSections(pages)
         if (sectionContents.isEmpty()) {
             throw ConversionError("No sections found in PDF document.")
@@ -38,7 +51,11 @@ object PdfParser {
         val exports = mutableListOf<QuizExport>()
         val errors = mutableListOf<String>()
 
-        for ((sectionName, lines) in sectionContents) {
+        val totalSections = sectionContents.size
+        sectionContents.forEachIndexed { index, (sectionName, lines) ->
+            val sectionPercent = 45 + ((index + 1) * 40 / totalSections)
+            progressCallback?.invoke("Parsing section", "\"$sectionName\" (${index + 1}/$totalSections)", sectionPercent)
+
             val tokens = lineClassifier.classifyAll(lines)
             val buildResult = questionBuilder.buildAll(tokens)
             var questions = buildResult.questions
@@ -51,7 +68,7 @@ object PdfParser {
                 if (strict) {
                     throw ConversionError(diagnostic)
                 }
-                continue
+                return@forEachIndexed
             }
 
             if (images.isNotEmpty()) {
@@ -85,6 +102,7 @@ object PdfParser {
             throw ConversionError("Failed to extract any valid sections. Errors:\n" + errors.joinToString("\n"))
         }
 
+        progressCallback?.invoke("Finalizing parse", "Extracted ${exports.size} valid section(s)", 88)
         return exports
     }
 

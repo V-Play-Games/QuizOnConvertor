@@ -7,6 +7,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.utils.io.jvm.javaio.*
+import kotlinx.coroutines.*
 import net.vplaygames.quizonconvertor.parser.ConversionError
 import net.vplaygames.quizonconvertor.parser.PdfParser
 import net.vplaygames.quizonconvertor.serializer.JsonExporter
@@ -31,92 +32,158 @@ fun Routing.configureRoutes() {
         val multipart = call.receiveMultipart()
 
         var tempPdfFile: File? = null
-        var tempOutputDir: File? = null
         var subjectCode: String? = null
         var year: Int? = null
         var term: String? = null
         var examType: String? = null
         var strict = false
 
-        try {
-            multipart.forEachPart { part ->
-                when (part) {
-                    is PartData.FileItem -> {
-                        if (part.name == "file" || part.originalFileName?.endsWith(".pdf", ignoreCase = true) == true) {
-                            val tempFile = Files.createTempFile("quizon_upload_", ".pdf").toFile()
-                            part.provider().toInputStream().use { input ->
-                                tempFile.outputStream().use { output ->
-                                    input.copyTo(output)
-                                }
+        multipart.forEachPart { part ->
+            when (part) {
+                is PartData.FileItem -> {
+                    if (part.name == "file" || part.originalFileName?.endsWith(".pdf", ignoreCase = true) == true) {
+                        val tempFile = Files.createTempFile("quizon_upload_", ".pdf").toFile()
+                        part.provider().toInputStream().use { input ->
+                            tempFile.outputStream().use { output ->
+                                input.copyTo(output)
                             }
-                            tempPdfFile = tempFile
                         }
+                        tempPdfFile = tempFile
                     }
-
-                    is PartData.FormItem -> {
-                        when (part.name) {
-                            "subjectCode" -> subjectCode = part.value.takeIf { it.isNotBlank() }
-                            "year" -> year = part.value.toIntOrNull()
-                            "term" -> term = part.value.takeIf { it.isNotBlank() }
-                            "examType" -> examType = part.value.takeIf { it.isNotBlank() }
-                            "strict" -> strict = part.value.toBoolean()
-                        }
-                    }
-
-                    else -> {}
                 }
-                part.release()
+
+                is PartData.FormItem -> {
+                    when (part.name) {
+                        "subjectCode" -> subjectCode = part.value.takeIf { it.isNotBlank() }
+                        "year" -> year = part.value.toIntOrNull()
+                        "term" -> term = part.value.takeIf { it.isNotBlank() }
+                        "examType" -> examType = part.value.takeIf { it.isNotBlank() }
+                        "strict" -> strict = part.value.toBoolean()
+                    }
+                }
+
+                else -> {}
             }
+            part.release()
+        }
 
-            val pdf = tempPdfFile
-            if (pdf == null || !pdf.exists() || pdf.length() == 0L) {
-                call.respondText("Error: No PDF file uploaded.", status = HttpStatusCode.BadRequest)
-                return@post
-            }
+        val pdf = tempPdfFile
+        if (pdf == null || !pdf.exists() || pdf.length() == 0L) {
+            call.respondText("Error: No PDF file uploaded.", status = HttpStatusCode.BadRequest)
+            return@post
+        }
 
-            tempOutputDir = Files.createTempDirectory("quizon_out_").toFile()
+        val job = JobRegistry.create()
 
-            // Run parsing pipeline
-            val parsedExports = PdfParser.parse(
-                pdfFile = pdf,
-                outputDir = tempOutputDir,
-                strict = strict
-            )
+        val sCode = subjectCode
+        val yr = year
+        val tm = term
+        val eType = examType
+        val st = strict
 
-            // Apply overrides
-            val updatedExports = parsedExports.map { export ->
-                val updatedSub = if (subjectCode != null) export.subject.copy(code = subjectCode!!) else export.subject
-                val updatedPap = export.paper.copy(
-                    year = year ?: export.paper.year,
-                    term = term ?: export.paper.term,
-                    examType = examType ?: export.paper.examType
+        CoroutineScope(Dispatchers.IO).launch {
+            var tempOutputDir: File? = null
+            try {
+                job.status = JobStatus.RUNNING
+                job.emit("Uploading PDF", "Processing uploaded file...", 2)
+
+                tempOutputDir = Files.createTempDirectory("quizon_out_").toFile()
+
+                val parsedExports = PdfParser.parse(
+                    pdfFile = pdf,
+                    outputDir = tempOutputDir,
+                    strict = st,
+                    progressCallback = { step, detail, percent ->
+                        job.emit(step, detail, percent)
+                    }
                 )
-                export.copy(subject = updatedSub, paper = updatedPap)
+
+                job.emit("Formatting output", "Applying metadata and creating JSON models...", 92)
+                val updatedExports = parsedExports.map { export ->
+                    val updatedSub = if (sCode != null) export.subject.copy(code = sCode) else export.subject
+                    val updatedPap = export.paper.copy(
+                        year = yr ?: export.paper.year,
+                        term = tm ?: export.paper.term,
+                        examType = eType ?: export.paper.examType
+                    )
+                    export.copy(subject = updatedSub, paper = updatedPap)
+                }
+
+                JsonExporter.export(updatedExports, tempOutputDir)
+
+                job.emit("Compressing output", "Creating ZIP package...", 96)
+                val zipBytes = zipFolder(tempOutputDir)
+
+                job.finish(zipBytes)
+            } catch (e: ConversionError) {
+                job.fail(e.message ?: "Unknown conversion error")
+            } catch (e: Exception) {
+                job.fail("Server Error: ${e.message}")
+            } finally {
+                pdf.delete()
+                tempOutputDir?.deleteRecursively()
             }
+        }
 
-            // Export JSON & report
-            JsonExporter.export(updatedExports, tempOutputDir)
+        call.respondText("""{"jobId":"${job.id}"}""", ContentType.Application.Json)
+    }
 
-            // Zip results
-            val zipBytes = zipFolder(tempOutputDir)
+    get("/api/progress/{jobId}") {
+        val jobId = call.parameters["jobId"]
+        val job = jobId?.let { JobRegistry.get(it) }
+        if (job == null) {
+            call.respond(HttpStatusCode.NotFound, "Job not found")
+            return@get
+        }
 
-            val zipName = "QuizOn_Export_${System.currentTimeMillis()}.zip"
-            call.response.header(
-                HttpHeaders.ContentDisposition,
-                ContentDisposition.Attachment.withParameter(ContentDisposition.Parameters.FileName, zipName).toString()
-            )
-            call.respondBytes(zipBytes, ContentType.Application.Zip)
+        call.respondTextWriter(contentType = ContentType.Text.EventStream) {
+            val timeoutTime = System.currentTimeMillis() + 5 * 60 * 1000
+            while (System.currentTimeMillis() < timeoutTime) {
+                val event = job.events.poll(500, java.util.concurrent.TimeUnit.MILLISECONDS)
+                if (event != null) {
+                    val escapedStep = event.step.replace("\"", "\\\"")
+                    val escapedDetail = event.detail.replace("\"", "\\\"").replace("\n", " ")
+                    val json = """{"step":"$escapedStep","detail":"$escapedDetail","percent":${event.percent},"status":"${event.status}"}"""
+                    write("data: $json\n\n")
+                    flush()
+                    if (event.status == JobStatus.DONE || event.status == JobStatus.ERROR) {
+                        break
+                    }
+                } else if (job.status == JobStatus.DONE || job.status == JobStatus.ERROR) {
+                    break
+                }
+            }
+        }
+    }
 
-        } catch (e: ConversionError) {
-            call.respondText("Conversion Error: ${e.message}", status = HttpStatusCode.UnprocessableEntity)
-        } catch (e: Exception) {
-            call.respondText(
-                "Server Error during conversion: ${e.message}",
-                status = HttpStatusCode.InternalServerError
-            )
-        } finally {
-            tempPdfFile?.delete()
-            tempOutputDir?.deleteRecursively()
+    get("/api/result/{jobId}") {
+        val jobId = call.parameters["jobId"]
+        val job = jobId?.let { JobRegistry.get(it) }
+        if (job == null) {
+            call.respondText("Job not found or expired.", status = HttpStatusCode.NotFound)
+            return@get
+        }
+
+        when (job.status) {
+            JobStatus.DONE -> {
+                val bytes = job.resultZip
+                if (bytes == null) {
+                    call.respondText("Result not available.", status = HttpStatusCode.InternalServerError)
+                    return@get
+                }
+                val zipName = "QuizOn_Export_${System.currentTimeMillis()}.zip"
+                call.response.header(
+                    HttpHeaders.ContentDisposition,
+                    ContentDisposition.Attachment.withParameter(ContentDisposition.Parameters.FileName, zipName).toString()
+                )
+                call.respondBytes(bytes, ContentType.Application.Zip)
+            }
+            JobStatus.ERROR -> {
+                call.respondText("Conversion Failed: ${job.errorMessage}", status = HttpStatusCode.UnprocessableEntity)
+            }
+            else -> {
+                call.respondText("Job is still processing.", status = HttpStatusCode.Conflict)
+            }
         }
     }
 }

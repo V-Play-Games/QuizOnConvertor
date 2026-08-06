@@ -23,6 +23,7 @@ fun HTML.renderIndexPage() {
                     --text-muted: #94a3b8;
                     --border-color: rgba(255, 255, 255, 0.1);
                     --success-color: #22c55e;
+                    --error-color: #ef4444;
                 }
                 * { box-sizing: border-box; margin: 0; padding: 0; }
                 body {
@@ -141,19 +142,112 @@ fun HTML.renderIndexPage() {
                     justify-content: center;
                     gap: 0.5rem;
                 }
-                .btn-submit:hover {
+                .btn-submit:hover:not(:disabled) {
                     transform: translateY(-2px);
                     box-shadow: 0 10px 25px -5px rgba(168, 85, 247, 0.4);
                 }
-                .spinner {
-                    border: 3px solid rgba(255,255,255,0.3);
-                    border-radius: 50%;
-                    border-top: 3px solid white;
-                    width: 20px; height: 20px;
-                    animation: spin 1s linear infinite;
-                    display: none;
+                .btn-submit:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
                 }
-                @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+                /* Progress Section */
+                .progress-section {
+                    margin-top: 2rem;
+                    display: none;
+                    flex-direction: column;
+                    gap: 1.25rem;
+                }
+                .progress-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    font-size: 0.95rem;
+                    font-weight: 600;
+                }
+                .progress-bar-bg {
+                    width: 100%;
+                    height: 12px;
+                    background: rgba(15, 23, 42, 0.8);
+                    border: 1px solid var(--border-color);
+                    border-radius: 999px;
+                    overflow: hidden;
+                }
+                .progress-bar-fill {
+                    height: 100%;
+                    width: 0%;
+                    background: var(--accent-gradient);
+                    border-radius: 999px;
+                    transition: width 0.4s ease;
+                }
+                .step-log {
+                    background: rgba(15, 23, 42, 0.6);
+                    border: 1px solid var(--border-color);
+                    border-radius: 14px;
+                    padding: 1rem 1.25rem;
+                    max-height: 180px;
+                    overflow-y: auto;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.6rem;
+                    font-size: 0.9rem;
+                }
+                .step-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    color: var(--text-muted);
+                    animation: fadeIn 0.3s ease;
+                }
+                .step-item.active {
+                    color: var(--text-main);
+                    font-weight: 500;
+                }
+                .step-item.done {
+                    color: var(--success-color);
+                }
+                .step-item.error {
+                    color: var(--error-color);
+                }
+                .step-icon {
+                    width: 20px;
+                    height: 20px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .error-box {
+                    display: none;
+                    background: rgba(239, 68, 68, 0.1);
+                    border: 1px solid rgba(239, 68, 68, 0.3);
+                    color: #fca5a5;
+                    border-radius: 12px;
+                    padding: 1rem 1.25rem;
+                    font-size: 0.95rem;
+                    line-height: 1.5;
+                    word-break: break-word;
+                }
+                .btn-download {
+                    display: none;
+                    width: 100%;
+                    padding: 1rem;
+                    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+                    border: none;
+                    border-radius: 12px;
+                    color: white;
+                    font-family: inherit;
+                    font-size: 1.1rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    text-decoration: none;
+                    text-align: center;
+                    transition: transform 0.2s, box-shadow 0.2s;
+                }
+                .btn-download:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 10px 25px -5px rgba(34, 197, 94, 0.4);
+                }
+                @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
                 """.trimIndent()
             }
         }
@@ -170,7 +264,7 @@ fun HTML.renderIndexPage() {
                 div("upload-box") {
                     id = "uploadBox"
                     div("upload-icon") { +"📄" }
-                    div("upload-text") { +"Drag & drop AMRITA exam PDF here or click to browse" }
+                    div("upload-text") { +"Drag & drop exam PDF here or click to browse" }
                     div("file-info") { id = "fileInfo" }
                     input(type = InputType.file, name = "file") {
                         id = "pdfFileInput"
@@ -216,7 +310,24 @@ fun HTML.renderIndexPage() {
                 button(type = ButtonType.submit, classes = "btn-submit") {
                     id = "submitBtn"
                     span { id = "btnText"; +"Convert PDF to ZIP" }
-                    div("spinner") { id = "btnSpinner" }
+                }
+            }
+
+            div("progress-section") {
+                id = "progressSection"
+                div("progress-header") {
+                    span { id = "progressStatusLabel"; +"Initializing conversion..." }
+                    span { id = "progressPercentLabel"; +"0%" }
+                }
+                div("progress-bar-bg") {
+                    div("progress-bar-fill") { id = "progressBarFill" }
+                }
+                div("step-log") { id = "stepLog" }
+                div("error-box") { id = "errorBox" }
+                a(classes = "btn-download") {
+                    id = "downloadBtn"
+                    href = "#"
+                    +"📥 Download Converted ZIP Package"
                 }
             }
 
@@ -226,6 +337,17 @@ fun HTML.renderIndexPage() {
                     const pdfInput = document.getElementById('pdfFileInput');
                     const fileInfo = document.getElementById('fileInfo');
                     const uploadBox = document.getElementById('uploadBox');
+                    const convertForm = document.getElementById('convertForm');
+                    const submitBtn = document.getElementById('submitBtn');
+                    const btnText = document.getElementById('btnText');
+                    
+                    const progressSection = document.getElementById('progressSection');
+                    const progressStatusLabel = document.getElementById('progressStatusLabel');
+                    const progressPercentLabel = document.getElementById('progressPercentLabel');
+                    const progressBarFill = document.getElementById('progressBarFill');
+                    const stepLog = document.getElementById('stepLog');
+                    const errorBox = document.getElementById('errorBox');
+                    const downloadBtn = document.getElementById('downloadBtn');
 
                     pdfInput.addEventListener('change', (e) => {
                         if (e.target.files.length > 0) {
@@ -247,6 +369,132 @@ fun HTML.renderIndexPage() {
                             fileInfo.textContent = 'Selected: ' + files[0].name;
                         }
                     });
+
+                    let eventSource = null;
+
+                    convertForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        if (!pdfInput.files || pdfInput.files.length === 0) return;
+
+                        submitBtn.disabled = true;
+                        btnText.textContent = 'Processing...';
+
+                        progressSection.style.display = 'flex';
+                        errorBox.style.display = 'none';
+                        downloadBtn.style.display = 'none';
+                        stepLog.innerHTML = '';
+                        progressBarFill.style.width = '0%';
+                        progressPercentLabel.textContent = '0%';
+                        progressStatusLabel.textContent = 'Starting conversion...';
+
+                        const formData = new FormData(convertForm);
+
+                        try {
+                            const response = await fetch('/api/convert', {
+                                method: 'POST',
+                                body: formData
+                            });
+
+                            if (!response.ok) {
+                                const errText = await response.text();
+                                showError(errText || 'Failed to initiate conversion.');
+                                return;
+                            }
+
+                            const data = await response.json();
+                            const jobId = data.jobId;
+
+                            if (!jobId) {
+                                showError('Invalid server response (missing jobId).');
+                                return;
+                            }
+
+                            listenProgress(jobId);
+
+                        } catch (err) {
+                            showError('Network error starting conversion: ' + err.message);
+                        }
+                    });
+
+                    function listenProgress(jobId) {
+                        if (eventSource) eventSource.close();
+                        eventSource = new EventSource('/api/progress/' + jobId);
+
+                        eventSource.onmessage = (e) => {
+                            try {
+                                const data = JSON.parse(e.data);
+                                updateProgressUI(data, jobId);
+                            } catch (err) {
+                                console.error('Failed to parse SSE progress message:', err);
+                            }
+                        };
+
+                        eventSource.onerror = (err) => {
+                            console.error('SSE Error:', err);
+                            eventSource.close();
+                        };
+                    }
+
+                    function updateProgressUI(data, jobId) {
+                        const { step, detail, percent, status } = data;
+
+                        if (percent >= 0) {
+                            progressBarFill.style.width = percent + '%';
+                            progressPercentLabel.textContent = percent + '%';
+                        }
+                        if (step) {
+                            progressStatusLabel.textContent = step;
+                        }
+
+                        if (step || detail) {
+                            const stepItem = document.createElement('div');
+                            stepItem.className = 'step-item active';
+
+                            let icon = '⏳';
+                            if (status === 'DONE') icon = '✅';
+                            if (status === 'ERROR') icon = '❌';
+
+                            stepItem.innerHTML = `<span class="step-icon">${'$'}{icon}</span><div><strong>${'$'}{escapeHtml(step)}</strong>${'$'}{detail ? ': ' + escapeHtml(detail) : ''}</div>`;
+                            
+                            // Mark previous active steps as done
+                            const existingSteps = stepLog.querySelectorAll('.step-item.active');
+                            existingSteps.forEach(s => s.classList.remove('active'));
+
+                            stepLog.appendChild(stepItem);
+                            stepLog.scrollTop = stepLog.scrollHeight;
+                        }
+
+                        if (status === 'DONE') {
+                            if (eventSource) eventSource.close();
+                            progressBarFill.style.width = '100%';
+                            progressPercentLabel.textContent = '100%';
+                            progressStatusLabel.textContent = 'Conversion Complete!';
+                            
+                            downloadBtn.href = '/api/result/' + jobId;
+                            downloadBtn.style.display = 'block';
+                            
+                            submitBtn.disabled = false;
+                            btnText.textContent = 'Convert Another PDF';
+
+                            // Auto trigger download
+                            window.location.href = '/api/result/' + jobId;
+                        } else if (status === 'ERROR') {
+                            if (eventSource) eventSource.close();
+                            showError(detail || 'Conversion failed.');
+                        }
+                    }
+
+                    function showError(msg) {
+                        errorBox.textContent = msg;
+                        errorBox.style.display = 'block';
+                        submitBtn.disabled = false;
+                        btnText.textContent = 'Convert PDF to ZIP';
+                        progressStatusLabel.textContent = 'Failed';
+                    }
+
+                    function escapeHtml(str) {
+                        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                    }
                     """.trimIndent()
                 }
             }
